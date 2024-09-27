@@ -8,12 +8,6 @@ type Vector3 struct {
 	Z float64
 }
 
-// Vector constructors
-
-func NewVector3(x, y, z float64) Vector3 {
-	return Vector3{x, y, z}
-}
-
 func ZeroVector3() Vector3 {
 	return Vector3{0, 0, 0}
 }
