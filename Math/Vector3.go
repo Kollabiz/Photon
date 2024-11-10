@@ -12,6 +12,14 @@ func ZeroVector3() Vector3 {
 	return Vector3{0, 0, 0}
 }
 
+func InfiniteVector3() Vector3 {
+	return Vector3{math.Inf(1), math.Inf(1), math.Inf(1)}
+}
+
+func NegativeInfiniteVector3() Vector3 {
+	return Vector3{math.Inf(-1), math.Inf(-1), math.Inf(-1)}
+}
+
 // Simple operations
 
 func (v Vector3) FMul(m float64) Vector3 {
@@ -24,6 +32,10 @@ func (v Vector3) FDiv(m float64) Vector3 {
 
 func (v Vector3) IMul(m int) Vector3 {
 	return Vector3{v.X * float64(m), v.Y * float64(m), v.Z * float64(m)}
+}
+
+func (v Vector3) Mul(o Vector3) Vector3 {
+	return Vector3{v.X * o.X, v.Y * o.Y, v.Z * o.Z}
 }
 
 func (v Vector3) IDiv(m int) Vector3 {
@@ -87,6 +99,10 @@ func (v Vector3) Sub(o Vector3) Vector3 {
 		Y: v.Y - o.Y,
 		Z: v.Z - o.Z,
 	}
+}
+
+func InterpolateVector3(f, s Vector3, t float64) Vector3 {
+	return s.FMul(t).Add(f.FMul(1 - t))
 }
 
 // Comparing vectors

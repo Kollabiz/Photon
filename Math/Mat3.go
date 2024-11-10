@@ -39,7 +39,7 @@ func Mat3SeparateScale(sx, sy, sz float64) Mat3 {
 	}
 }
 
-// Rotation matrices
+// rotation matrices
 
 func Mat3XRotation(a float64) Mat3 {
 	s := math.Sin(a)
