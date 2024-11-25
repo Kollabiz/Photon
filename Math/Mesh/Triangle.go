@@ -6,48 +6,35 @@ import (
 )
 
 type Triangle struct {
-	Edge1          *Edge
-	Edge2          *Edge
-	Edge3          *Edge
+	V1             Vertex
+	V2             Vertex
+	V3             Vertex
 	Material       *Structs.Material
 	TriangleNormal Math.Vector3
 }
 
-func (triangle *Triangle) VertByID(id int) *Vertex {
-	if id == 0 {
-		return triangle.Edge1.Vertex1
-	}
-	if id == 1 {
-		return triangle.Edge2.Vertex1
-	}
-	if id == 2 {
-		return triangle.Edge3.Vertex1
-	}
-	return nil
-}
-
 func (triangle *Triangle) FirstVertPosition() Math.Vector3 {
-	return triangle.Edge1.Vertex1.Position
-}
-
-func (triangle *Triangle) FirstVert() *Vertex {
-	return triangle.Edge1.Vertex1
+	return triangle.V1.Position
 }
 
 func (triangle *Triangle) SecondVertPosition() Math.Vector3 {
-	return triangle.Edge2.Vertex1.Position
-}
-
-func (triangle *Triangle) SecondVert() *Vertex {
-	return triangle.Edge2.Vertex1
+	return triangle.V2.Position
 }
 
 func (triangle *Triangle) ThirdVertPosition() Math.Vector3 {
-	return triangle.Edge3.Vertex1.Position
+	return triangle.V3.Position
 }
 
-func (triangle *Triangle) ThirdVert() *Vertex {
-	return triangle.Edge3.Vertex1
+func (triangle *Triangle) Edge12() Math.Vector3 {
+	return triangle.V2.Position.Sub(triangle.V1.Position)
+}
+
+func (triangle *Triangle) Edge23() Math.Vector3 {
+	return triangle.V3.Position.Sub(triangle.V2.Position)
+}
+
+func (triangle *Triangle) Edge13() Math.Vector3 {
+	return triangle.V3.Position.Sub(triangle.V1.Position)
 }
 
 func (triangle *Triangle) Middle() Math.Vector3 {
@@ -55,23 +42,20 @@ func (triangle *Triangle) Middle() Math.Vector3 {
 }
 
 func (triangle *Triangle) ApplyTransform(t *Math.Transform, m Math.Vector3) {
-	v1 := triangle.FirstVert()
-	v2 := triangle.SecondVert()
-	v3 := triangle.ThirdVert()
-	v1.Sub(m)
-	v1.MatMul(t.GetScaleMatrix())
-	v1.MatMul(t.GetRotationMatrix())
-	v1.Add(t.GetPosition())
-	v2.Sub(m)
-	v2.MatMul(t.GetScaleMatrix())
-	v2.MatMul(t.GetRotationMatrix())
-	v2.Add(t.GetPosition())
-	v3.Sub(m)
-	v3.MatMul(t.GetScaleMatrix())
-	v3.MatMul(t.GetRotationMatrix())
-	v3.Add(t.GetPosition())
+	triangle.V1.Sub(m)
+	triangle.V1.MatMul(t.GetScaleMatrix())
+	triangle.V1.MatMul(t.GetRotationMatrix())
+	triangle.V1.Add(t.GetPosition())
+	triangle.V2.Sub(m)
+	triangle.V2.MatMul(t.GetScaleMatrix())
+	triangle.V2.MatMul(t.GetRotationMatrix())
+	triangle.V2.Add(t.GetPosition())
+	triangle.V3.Sub(m)
+	triangle.V3.MatMul(t.GetScaleMatrix())
+	triangle.V3.MatMul(t.GetRotationMatrix())
+	triangle.V3.Add(t.GetPosition())
 }
 
 func (triangle *Triangle) RecalcNormal() {
-	triangle.TriangleNormal = triangle.Edge1.Vector().Normalized().Cross(triangle.Edge2.Vector().Normalized()).Normalized()
+	triangle.TriangleNormal = triangle.Edge12().Normalized().Cross(triangle.Edge23().Normalized()).Normalized()
 }
