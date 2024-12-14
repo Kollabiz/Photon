@@ -59,3 +59,29 @@ func (triangle *Triangle) ApplyTransform(t *Math.Transform, m Math.Vector3) {
 func (triangle *Triangle) RecalcNormal() {
 	triangle.TriangleNormal = triangle.Edge12().Normalized().Cross(triangle.Edge23().Normalized()).Normalized()
 }
+
+func (triangle *Triangle) InterpolateTexcoords(uv Math.Vector2) Math.Vector2 {
+	x, y, z := uv.U, uv.V, 1-uv.U-uv.V
+	return triangle.V1.TextureCoordinate.FMul(x).Add(triangle.V2.TextureCoordinate.FMul(y)).Add(triangle.V3.TextureCoordinate.FMul(z))
+}
+
+func (triangle *Triangle) InterpolateNormals(uv Math.Vector2) Math.Vector3 {
+	x, y, z := uv.U, uv.V, 1-uv.U-uv.V
+	var n1, n2, n3 Math.Vector3
+	if triangle.V1.Sharp {
+		n1 = triangle.TriangleNormal
+	} else {
+		n1 = triangle.V1.Normal
+	}
+	if triangle.V2.Sharp {
+		n2 = triangle.TriangleNormal
+	} else {
+		n2 = triangle.V2.Normal
+	}
+	if triangle.V3.Sharp {
+		n3 = triangle.TriangleNormal
+	} else {
+		n3 = triangle.V3.Normal
+	}
+	return n1.FMul(x).Add(n2.FMul(y)).Add(n3.FMul(z))
+}

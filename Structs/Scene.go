@@ -126,7 +126,7 @@ func (scene *Scene) rebuildBVH() {
 	Utils.Log("rebuilding scene BVH...")
 	nodeLayer := make([]BoundingVolumes.BVHNode, len(scene.objects))
 	for i := 0; i < len(scene.objects); i++ {
-		nodeLayer = append(nodeLayer, *BoundingVolumes.NewBVHNodeFromMesh(&scene.objects[i]))
+		nodeLayer = append(nodeLayer, *BoundingVolumes.BVHFromMesh(&scene.objects[i], scene.sceneSettings.KNearestPointRatio))
 	}
 	// Iterate through nodes until there is but one left
 	for len(nodeLayer) > 1 {
@@ -150,7 +150,7 @@ func (scene *Scene) rebuildBVH() {
 		// Remove the closest node from the array
 		nodeLayer = append(nodeLayer[:closestIndex], nodeLayer[closestIndex+1:]...)
 		// And join selected nodes together
-		nodeLayer = append(nodeLayer, BoundingVolumes.JoinBVHNodes(node1, closest))
+		nodeLayer = append(nodeLayer, BoundingVolumes.JoinedNode(node1, closest))
 	}
 	// When len(nodeLayer) reaches zero, we are done and can save the resulting root node to the scene object
 	Utils.LogSuccess("done rebuilding BVH!")

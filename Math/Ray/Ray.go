@@ -11,8 +11,8 @@ const epsilon = 0.00001
 
 func IntersectRayTriangle(rDirection, rOrigin Math.Vector3, tri *Mesh.Triangle) (bool, Math.Vector3, Math.Vector2) {
 	var h, s, q Math.Vector3
-	e1 := tri.Edge1.Vector()
-	e2 := tri.Edge2.Vector()
+	e1 := tri.FirstVertPosition()
+	e2 := tri.SecondVertPosition()
 	var a, f, u, v float64
 	h = rDirection.Cross(e2)
 	a = h.Dot(e1)

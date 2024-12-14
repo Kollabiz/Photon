@@ -6,6 +6,7 @@ type Vertex struct {
 	Position          Math.Vector3
 	Normal            Math.Vector3
 	TextureCoordinate Math.Vector2
+	Sharp             bool
 }
 
 func NewVertex(position Math.Vector3, normal Math.Vector3, texCoord Math.Vector2) *Vertex {
@@ -13,6 +14,7 @@ func NewVertex(position Math.Vector3, normal Math.Vector3, texCoord Math.Vector2
 		Position:          position,
 		Normal:            normal,
 		TextureCoordinate: texCoord,
+		Sharp:             false,
 	}
 }
 
