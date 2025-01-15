@@ -101,6 +101,10 @@ func (v Vector3) Sub(o Vector3) Vector3 {
 	}
 }
 
+func (v Vector3) Reflect(n Vector3) Vector3 {
+	return v.Sub(n.FMul(v.Dot(n) * 2))
+}
+
 func InterpolateVector3(f, s Vector3, t float64) Vector3 {
 	return s.FMul(t).Add(f.FMul(1 - t))
 }

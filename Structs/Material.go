@@ -2,8 +2,15 @@ package Structs
 
 import (
 	"Photon/Math"
-	"math"
 )
+
+// BRDF function interface
+// Kind of crutch-y, but fast (at least I hope it is)
+
+type IBRDF interface {
+	Sample(view, indescent, normal, lightColor, albedo Math.Vector3, lightIntensity, roughness, metallic, ior float64) Math.Vector3
+	// View, Light, Normal, light color, light intensity, albedo, roughness, metallic, ior -> color
+}
 
 type Material struct {
 	// Albedo
@@ -20,6 +27,8 @@ type Material struct {
 	metallic            float64
 	// IOR
 	ior float64
+	// BRDF function
+	BRDF IBRDF
 }
 
 func (material *Material) sampleTextures(uv Math.Vector2) (Math.Vector3, float64, float64) {
@@ -46,32 +55,7 @@ func (material *Material) sampleTextures(uv Math.Vector2) (Math.Vector3, float64
 
 func (material *Material) SampleLight(uv Math.Vector2, v, l, n Math.Vector3, li float64, lc Math.Vector3) Math.Vector3 {
 	albedo, roughness, metallic := material.sampleTextures(uv)
-
-	// Cook-Torrance BRDF
-
-	h := v.Add(l).FDiv(2)
-
-	// Geometric attenuation
-	g := math.Min(math.Min(1, 2*h.Dot(n)*v.Dot(n)/v.Dot(h)), 2*h.Dot(n)*l.Dot(n)/v.Dot(h))
-
-	// Beckmann distribution
-	alpha := math.Acos(n.Dot(h))
-	cosAlpha := math.Pow(math.Cos(alpha), 2)
-	tanAlpha := (cosAlpha - 1) / cosAlpha
-	roughness2 := roughness * roughness
-	denominator := math.Pi * roughness2 * cosAlpha * cosAlpha
-	d := math.Exp(-tanAlpha*tanAlpha/roughness2) / denominator
-
-	// Fresnel
-	r0 := math.Pow((1-material.ior)/(1+material.ior), 2)
-	f := r0 + (1-r0)*(1-n.Dot(v))
-
-	specularDistribution := d * f * g / (4 * v.Dot(n) * n.Dot(l))
-	specular := lc.FMul(li * specularDistribution)
-
-	metal := specular.Mul(albedo)
-	glossy := specular.Add(albedo).FDiv(2)
-	return Math.InterpolateVector3(glossy, metal, metallic)
+	return material.BRDF.Sample(v, l, n, lc, albedo, li, roughness, metallic, material.ior)
 }
 
 func (material *Material) SampleSimplifiedLight(uv Math.Vector2, l, n Math.Vector3, li float64, lc Math.Vector3) Math.Vector3 {

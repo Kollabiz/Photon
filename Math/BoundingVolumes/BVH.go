@@ -66,14 +66,14 @@ func BVHFromMesh(mesh *Mesh.Mesh, pointRatio float64) *BVHNode {
 		tri := &mesh.Triangles[triIdx]
 		clusters[i].AABB = NewAABB(
 			Math.Vector3{
-				X: min(tri.V1.Position.X, tri.V2.Position.X, tri.V3.Position.X),
-				Y: min(tri.V1.Position.Y, tri.V2.Position.Y, tri.V3.Position.Y),
-				Z: min(tri.V1.Position.Z, tri.V2.Position.Z, tri.V3.Position.Z),
+				X: min(tri.V1Pos.X, tri.V2Pos.X, tri.V3Pos.X),
+				Y: min(tri.V1Pos.Y, tri.V2Pos.Y, tri.V3Pos.Y),
+				Z: min(tri.V1Pos.Z, tri.V2Pos.Z, tri.V3Pos.Z),
 			},
 			Math.Vector3{
-				X: max(tri.V1.Position.X, tri.V2.Position.X, tri.V3.Position.X),
-				Y: max(tri.V1.Position.Y, tri.V2.Position.Y, tri.V3.Position.Y),
-				Z: max(tri.V1.Position.Z, tri.V2.Position.Z, tri.V3.Position.Z),
+				X: max(tri.V1Pos.X, tri.V2Pos.X, tri.V3Pos.X),
+				Y: max(tri.V1Pos.Y, tri.V2Pos.Y, tri.V3Pos.Y),
+				Z: max(tri.V1Pos.Z, tri.V2Pos.Z, tri.V3Pos.Z),
 			},
 		)
 	}
@@ -95,14 +95,14 @@ func BVHFromMesh(mesh *Mesh.Mesh, pointRatio float64) *BVHNode {
 		}
 		closestCluster.Triangles = append(closestCluster.Triangles, *tri)
 		closestCluster.AABB.Point1 = Math.Vector3{
-			X: min(tri.V1.Position.X, tri.V2.Position.X, tri.V3.Position.X, closestCluster.AABB.Point1.X),
-			Y: min(tri.V1.Position.Y, tri.V2.Position.Y, tri.V3.Position.Y, closestCluster.AABB.Point1.Y),
-			Z: min(tri.V1.Position.Z, tri.V2.Position.Z, tri.V3.Position.Z, closestCluster.AABB.Point1.Z),
+			X: min(tri.V1Pos.X, tri.V2Pos.X, tri.V3Pos.X, closestCluster.AABB.Point1.X),
+			Y: min(tri.V1Pos.Y, tri.V2Pos.Y, tri.V3Pos.Y, closestCluster.AABB.Point1.Y),
+			Z: min(tri.V1Pos.Z, tri.V2Pos.Z, tri.V3Pos.Z, closestCluster.AABB.Point1.Z),
 		}
 		closestCluster.AABB.Point2 = Math.Vector3{
-			X: max(tri.V1.Position.X, tri.V2.Position.X, tri.V3.Position.X, closestCluster.AABB.Point2.X),
-			Y: max(tri.V1.Position.Y, tri.V2.Position.Y, tri.V3.Position.Y, closestCluster.AABB.Point2.Y),
-			Z: max(tri.V1.Position.Z, tri.V2.Position.Z, tri.V3.Position.Z, closestCluster.AABB.Point2.Z),
+			X: max(tri.V1Pos.X, tri.V2Pos.X, tri.V3Pos.X, closestCluster.AABB.Point2.X),
+			Y: max(tri.V1Pos.Y, tri.V2Pos.Y, tri.V3Pos.Y, closestCluster.AABB.Point2.Y),
+			Z: max(tri.V1Pos.Z, tri.V2Pos.Z, tri.V3Pos.Z, closestCluster.AABB.Point2.Z),
 		}
 	}
 
