@@ -10,8 +10,8 @@ import (
 )
 
 type AABoundingBox struct {
-	Point1 Math.Vector3
-	Point2 Math.Vector3
+	Point1 Math.Vector3 // Min
+	Point2 Math.Vector3 // Max
 }
 
 func NewAABB(p1, p2 Math.Vector3) *AABoundingBox {

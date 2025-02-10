@@ -118,29 +118,3 @@ func (m Mat3) VecMul(o Vector3) Vector3 {
 		Z: o.X*m.Matrix[6] + o.Y*m.Matrix[7] + o.Z*m.Matrix[8],
 	}
 }
-
-// Basis manipulation
-
-func BasisMat3(basis Vector3) Mat3 {
-	basisX := Vector3{X:basis.X}
-	basisY := Vector3{Y:basis.Y}
-	basisZ := Vector3{Z:basis.Z}
-	mat := Mat3{Matrix: [9]float64{
-		Vector3{X: 1}.Dot(basisX), Vector3{Y: 1}.Dot(basisX), Vector3{Z: 1}.Dot(basisX),
-		Vector3{X: 1}.Dot(basisY), Vector3{Y: 1}.Dot(basisY), Vector3{Z: 1}.Dot(basisY),
-		Vector3{X: 1}.Dot(basisZ), Vector3{Y: 1}.Dot(basisZ), Vector3{Z: 1}.Dot(basisZ),
-	}}
-	return mat
-}
-
-func FromBasisMat3(basis Vector3) Mat3 {
-	basisX := Vector3{X:basis.X}
-	basisY := Vector3{Y:basis.Y}
-	basisZ := Vector3{Z:basis.Z}
-	mat := Mat3{Matrix: [9]float64{
-		Vector3{X: 1}.Dot(basisX), Vector3{X: 1}.Dot(basisY), Vector3{X: 1}.Dot(basisZ),
-		Vector3{Y: 1}.Dot(basisX), Vector3{Y: 1}.Dot(basisY), Vector3{Y: 1}.Dot(basisZ),
-		Vector3{Z: 1}.Dot(basisX), Vector3{Z: 1}.Dot(basisY), Vector3{Z: 1}.Dot(basisZ),
-	}}
-	return mat
-}
