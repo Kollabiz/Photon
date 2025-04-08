@@ -1,6 +1,9 @@
 package Math
 
-import "math"
+import (
+	"image/color"
+	"math"
+)
 
 type Vector3 struct {
 	X float64
@@ -116,4 +119,64 @@ func (v Vector3) Equal(o Vector3) bool {
 		return true
 	}
 	return false
+}
+
+func (v Vector3) FromBasis(basisX Vector3, basisY Vector3, basisZ Vector3) Vector3 {
+	return Vector3{
+		X: v.X*basisX.X + v.Y*basisY.X + v.Z*basisZ.X,
+		Y: v.X*basisX.Y + v.Y*basisY.Y + v.Z*basisZ.Y,
+		Z: v.X*basisX.Z + v.Y*basisY.Z + v.Z*basisZ.Z,
+	}
+}
+
+func (v Vector3) FromSingleVectorBasis(basisVec Vector3) Vector3 {
+	var helper Vector3
+	if basisVec.X >= 0.99 {
+		helper = Vector3{0, 0, 1}
+	} else {
+		helper = Vector3{1, 0, 0}
+	}
+	tangent := basisVec.Cross(helper).Normalized()
+	binormal := basisVec.Cross(tangent).Normalized()
+	transfX := Vector3{
+		X: tangent.X,
+		Y: binormal.X,
+		Z: basisVec.X,
+	}
+	transfY := Vector3{
+		X: tangent.Y,
+		Y: binormal.Y,
+		Z: basisVec.Y,
+	}
+	transfZ := Vector3{
+		X: tangent.Z,
+		Y: binormal.Z,
+		Z: basisVec.Z,
+	}
+	return Vector3{
+		X: transfX.Dot(v),
+		Y: transfY.Dot(v),
+		Z: transfZ.Dot(v),
+	}
+}
+
+func (v Vector3) ColorGrayscale() float64 {
+	return (v.X + v.Y + v.Z) / 3
+}
+
+func (v Vector3) ToColor() color.Color {
+	return color.RGBA{
+		R: uint8(v.X * 255),
+		G: uint8(v.Y * 255),
+		B: uint8(v.Z * 255),
+		A: 255,
+	}
+}
+
+func (v Vector3) ToNormalColor() Vector3 {
+	return Vector3{
+		X: v.X/2 + 0.5,
+		Y: v.Y/2 + 0.5,
+		Z: v.Z/2 + 0.5,
+	}
 }

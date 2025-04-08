@@ -1,8 +1,7 @@
-package BoundingVolumes
+package Structs
 
 import (
 	"Photon/Math"
-	"Photon/Math/Mesh"
 	"Photon/Utils"
 	"math"
 	"math/rand"
@@ -29,39 +28,46 @@ type BVHNode struct {
 	AABB             *AABoundingBox
 	Child1           *BVHNode
 	Child2           *BVHNode
-	Mesh             *Mesh.Mesh
-	TriangleClusters []Mesh.TriangleCluster
+	Mesh             *Mesh
+	TriangleClusters []TriangleCluster
+	NodeID           int
+}
+
+func (node *BVHNode) IsALeaf() bool {
+	return node.Child1 == nil && node.Child2 == nil
 }
 
 // Joining BVH nodes
 
 func JoinedNode(node1, node2 *BVHNode) BVHNode {
 	minX := math.Min(node1.AABB.Point1.X, node2.AABB.Point1.X)
-	maxX := math.Max(node1.AABB.Point1.X, node2.AABB.Point1.X)
+	maxX := math.Max(node1.AABB.Point2.X, node2.AABB.Point2.X)
 	minY := math.Min(node1.AABB.Point1.Y, node2.AABB.Point1.Y)
-	maxY := math.Max(node1.AABB.Point1.Y, node2.AABB.Point1.Y)
+	maxY := math.Max(node1.AABB.Point2.Y, node2.AABB.Point2.Y)
 	minZ := math.Min(node1.AABB.Point1.Z, node2.AABB.Point1.Z)
-	maxZ := math.Max(node1.AABB.Point1.Z, node2.AABB.Point1.Z)
+	maxZ := math.Max(node1.AABB.Point2.Z, node2.AABB.Point2.Z)
 	return BVHNode{
 		AABB:             NewAABB(Math.Vector3{minX, minY, minZ}, Math.Vector3{maxX, maxY, maxZ}),
 		Child1:           node1,
 		Child2:           node2,
 		Mesh:             nil,
 		TriangleClusters: nil,
+		NodeID:           rand.Intn(256),
 	}
 }
 
 // The hardest part, BVH node from a mesh
 
-func BVHFromMesh(mesh *Mesh.Mesh, pointRatio float64) *BVHNode {
+func BVHFromMesh(mesh *Mesh, pointRatio float64) *BVHNode {
 	Utils.Log("Creating acceleration structures for mesh " + mesh.MeshName)
-	clusterCount := int(float64(len(mesh.Triangles)) * pointRatio)
+	clusterCount := max(int(float64(len(mesh.Triangles))*pointRatio), 1)
+	Utils.Log(strconv.Itoa(len(mesh.Triangles)) + " triangles in the mesh " + mesh.MeshName)
 	Utils.Log(strconv.Itoa(clusterCount) + " triangle clusters will be created")
 
-	clusters := make([]Mesh.TriangleCluster, clusterCount)
+	clusters := make([]TriangleCluster, clusterCount)
 
 	// Preparing clusters
-	for i := 0; i < len(clusters); i++ {
+	for i := 0; i < clusterCount; i++ {
 		triIdx := rand.Intn(len(mesh.Triangles))
 		tri := &mesh.Triangles[triIdx]
 		clusters[i].AABB = NewAABB(
@@ -108,7 +114,7 @@ func BVHFromMesh(mesh *Mesh.Mesh, pointRatio float64) *BVHNode {
 
 	Utils.Log("Building mesh AABB")
 	aabb := NewAABB(clusters[0].AABB.Point1, clusters[0].AABB.Point2)
-	for j := 1; j < len(clusters); j++ {
+	for j := 1; j < clusterCount; j++ {
 		aabb.Point1 = Math.Vector3{
 			X: min(aabb.Point1.X, clusters[j].AABB.Point1.X),
 			Y: min(aabb.Point1.Y, clusters[j].AABB.Point1.Y),
@@ -121,6 +127,8 @@ func BVHFromMesh(mesh *Mesh.Mesh, pointRatio float64) *BVHNode {
 		}
 	}
 
+	Utils.Log("AABB diagonal size: " + strconv.FormatFloat(aabb.Point2.Sub(aabb.Point1).Len(), 'f', -1, 64))
+
 	Utils.Log("Assembling BVH node")
 	node := &BVHNode{
 		AABB:             aabb,
@@ -128,6 +136,7 @@ func BVHFromMesh(mesh *Mesh.Mesh, pointRatio float64) *BVHNode {
 		Child2:           nil,
 		Mesh:             mesh,
 		TriangleClusters: clusters,
+		NodeID:           rand.Intn(256),
 	}
 
 	Utils.LogSuccess("Done building acceleration structures for mesh " + mesh.MeshName)

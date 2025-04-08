@@ -2,19 +2,53 @@ package Structs
 
 import (
 	"Photon/Math"
-	"Photon/Math/BoundingVolumes"
-	"Photon/Math/Mesh"
 	"Photon/Utils"
 	"fmt"
+	"strconv"
 )
 
+// TODO: Remove me
+func Debug_TraverseBVHTree(tree *BVHNode) {
+	// Basic inorder traversal
+	nodes_to_traverse := []BVHNode{*tree}
+	max_depth := 10
+	i := 0
+	Utils.LogWarning("DEBUG_BVH_TRAVERSAL (Scene.go:13 -> Debug_TraverseBVHTree())")
+	for len(nodes_to_traverse) > 0 {
+		if i > max_depth {
+			return
+		}
+		node := nodes_to_traverse[0]
+		nodes_to_traverse = nodes_to_traverse[1:]
+		if !node.IsALeaf() {
+			i++
+			fmt.Print("Node(" + strconv.Itoa(node.NodeID) + "): ")
+			if node.Child1.Mesh != nil {
+				fmt.Print(" Child1: " + node.Child1.Mesh.MeshName + "(" + strconv.Itoa(node.Child1.NodeID) + ")")
+			} else {
+				fmt.Print(" Child1: NO_MESH" + "(" + strconv.Itoa(node.Child1.NodeID) + ")")
+			}
+
+			if node.Child2.Mesh != nil {
+				fmt.Print(" Child2: " + node.Child2.Mesh.MeshName + "(" + strconv.Itoa(node.Child2.NodeID) + ")")
+			} else {
+				fmt.Print(" Child2: NO_MESH" + "(" + strconv.Itoa(node.Child2.NodeID) + ")")
+			}
+			fmt.Println()
+			nodes_to_traverse = append(nodes_to_traverse, *node.Child1, *node.Child2)
+		} else {
+			fmt.Println("Node: Leaf (" + node.Mesh.MeshName + ")" + " (" + strconv.Itoa(node.NodeID) + ")")
+		}
+	}
+	Utils.LogSuccess("Done DEBUG_BVH_TRAVERSAL")
+}
+
 type Scene struct {
-	objects       []Mesh.Mesh
+	objects       []Mesh
 	lightSources  []LightSource
 	camera        *Camera
 	sceneSettings *SceneSettings
-	baseNode      *BoundingVolumes.BVHNode
-	renderBuffer  *RenderBuffer
+	baseNode      *BVHNode
 }
 
 func NewScene(resolutionX, resolutionY int, FOV float64, settings *SceneSettings) *Scene {
@@ -32,7 +66,6 @@ func NewScene(resolutionX, resolutionY int, FOV float64, settings *SceneSettings
 	)
 	Utils.LogSuccess("scene Camera created successfully!")
 	scene.sceneSettings = settings
-	scene.renderBuffer = MakeRenderBuffer(resolutionX, resolutionY)
 	Utils.LogSuccess("Scene created successfully!")
 	return scene
 }
@@ -57,7 +90,7 @@ func (scene *Scene) containsSameLight(lightID int) bool {
 
 // Adding objects
 
-func (scene *Scene) AddObject(object *Mesh.Mesh) {
+func (scene *Scene) AddObject(object *Mesh) {
 	if scene.containsSameObject(object.MeshName) {
 		Utils.LogError("trying to add duplicate mesh")
 		panic("there is already an object with the same name")
@@ -65,7 +98,7 @@ func (scene *Scene) AddObject(object *Mesh.Mesh) {
 	scene.objects = append(scene.objects, *object)
 }
 
-func (scene *Scene) AddObjectOrCopy(object *Mesh.Mesh) {
+func (scene *Scene) AddObjectOrCopy(object *Mesh) {
 	if scene.containsSameObject(object.MeshName) {
 		Utils.LogWarning("mesh with the same name found, the mesh was copied")
 		scene.objects = append(scene.objects, *object.Copy())
@@ -74,7 +107,7 @@ func (scene *Scene) AddObjectOrCopy(object *Mesh.Mesh) {
 	scene.objects = append(scene.objects, *object)
 }
 
-func (scene *Scene) AddObjectOrLinkedCopy(object *Mesh.Mesh) {
+func (scene *Scene) AddObjectOrLinkedCopy(object *Mesh) {
 	if scene.containsSameObject(object.MeshName) {
 		Utils.LogWarning("mesh with the same name found, the mesh was linked")
 		scene.objects = append(scene.objects, *object.LinkedCopy())
@@ -102,7 +135,7 @@ func (scene *Scene) GetCamera() *Camera {
 	return scene.camera
 }
 
-func (scene *Scene) GetObject(name string) *Mesh.Mesh {
+func (scene *Scene) GetObject(name string) *Mesh {
 	for i := 0; i < len(scene.objects); i++ {
 		if scene.objects[i].MeshName == name {
 			return &scene.objects[i]
@@ -122,37 +155,47 @@ func (scene *Scene) GetLight(id int) LightSource {
 	return nil
 }
 
-func (scene *Scene) rebuildBVH() {
+func (scene *Scene) RebuildBVH() {
 	Utils.Log("rebuilding scene BVH...")
-	nodeLayer := make([]BoundingVolumes.BVHNode, len(scene.objects))
-	for i := 0; i < len(scene.objects); i++ {
-		nodeLayer = append(nodeLayer, *BoundingVolumes.BVHFromMesh(&scene.objects[i], scene.sceneSettings.KNearestPointRatio))
+	var nodeLayer []BVHNode
+	for j := 0; j < len(scene.objects); j++ {
+		nodeLayer = append(nodeLayer, *BVHFromMesh(&scene.objects[j], scene.sceneSettings.KNearestPointRatio))
 	}
 	// Iterate through nodes until there is but one left
 	for len(nodeLayer) > 1 {
 		// Take the first node. We don't really care about which node that is
-		node1 := &nodeLayer[0]
+		node := &nodeLayer[0]
 		// Then remove it from the array
 		nodeLayer = nodeLayer[1:]
 		// And find the closest node
-		var closest = &nodeLayer[0]
-		var closestDistance = node1.AABB.MiddlePoint().Sub(closest.AABB.MiddlePoint()).LenSq() // LenSq is good enough
-		closestIndex := 0                                                                      // Needed solely for the sake of removing that node from the list later on
-		for j := 1; j < len(nodeLayer); j++ {
-			node := &nodeLayer[j]
-			d := node.AABB.MiddlePoint().Sub(node1.AABB.MiddlePoint()).LenSq()
-			if d < closestDistance {
-				closest = node
-				closestDistance = d
-				closestIndex = j
+		var closestNode BVHNode
+		var closestIndex int = -1
+		for i := 0; i < len(nodeLayer); i++ {
+			if closestIndex == -1 {
+				closestNode = nodeLayer[i]
+				closestIndex = i
+				continue
+			}
+			if closestNode.AABB.MiddlePoint().Sub(node.AABB.MiddlePoint()).LenSq() > nodeLayer[i].AABB.MiddlePoint().Sub(node.AABB.MiddlePoint()).LenSq() {
+				closestNode = nodeLayer[i]
+				closestIndex = i
 			}
 		}
-		// Remove the closest node from the array
-		nodeLayer = append(nodeLayer[:closestIndex], nodeLayer[closestIndex+1:]...)
-		// And join selected nodes together
-		nodeLayer = append(nodeLayer, BoundingVolumes.JoinedNode(node1, closest))
+		if closestIndex != -1 {
+			nodeLayer = append(nodeLayer[:closestIndex], nodeLayer[closestIndex+1:]...)
+		}
+		jNode := JoinedNode(node, &closestNode)
+		nodeLayer = append(nodeLayer, jNode)
 	}
 	// When len(nodeLayer) reaches zero, we are done and can save the resulting root node to the scene object
 	Utils.LogSuccess("done rebuilding BVH!")
 	scene.baseNode = &nodeLayer[0]
+}
+
+func (scene *Scene) GetSceneSettings() SceneSettings {
+	return *scene.sceneSettings
+}
+
+func (scene *Scene) GetLightSources() []LightSource {
+	return scene.lightSources
 }

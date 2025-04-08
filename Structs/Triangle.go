@@ -1,8 +1,7 @@
-package Mesh
+package Structs
 
 import (
 	"Photon/Math"
-	"Photon/Structs"
 )
 
 type Triangle struct {
@@ -16,7 +15,7 @@ type Triangle struct {
 	V2Tex          Math.Vector2
 	V3Tex          Math.Vector2
 	Smooth         bool
-	Material       *Structs.Material
+	Material       *Material
 	TriangleNormal Math.Vector3
 }
 

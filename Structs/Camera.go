@@ -16,20 +16,20 @@ func lensSizeFromResolution(resolution Math.Vector2) Math.Vector2 {
 	if resolution.U > resolution.V {
 		aspectRatio := resolution.U / resolution.V
 		return Math.Vector2{
-			U: 1,
-			V: aspectRatio,
+			U: aspectRatio,
+			V: 1,
 		}
 	} else {
 		aspectRatio := resolution.V / resolution.U
 		return Math.Vector2{
-			U: aspectRatio,
-			V: 1,
+			U: 1,
+			V: aspectRatio,
 		}
 	}
 }
 
 func focalLengthFromFOV(fov float64) float64 {
-	return math.Tan(fov / 180 * math.Pi)
+	return 1 / math.Tan(fov/180*math.Pi)
 }
 
 func NewCamera(position, rotation Math.Vector3, resolution Math.Vector2, fov float64) *Camera {
@@ -64,4 +64,20 @@ func (c *Camera) Move(offset Math.Vector3) {
 
 func (c *Camera) Rotate(rotation Math.Vector3) {
 	c.transform.Rotate(rotation)
+}
+
+func (c *Camera) GetResolution() Math.Vector2 {
+	return c.resolution
+}
+
+func (c *Camera) Forward() Math.Vector3 {
+	return c.transform.GetRotationMatrix().VecMul(Math.Vector3{Z: 1})
+}
+
+func (c *Camera) Right() Math.Vector3 {
+	return c.transform.GetRotationMatrix().VecMul(Math.Vector3{X: 1})
+}
+
+func (c *Camera) Up() Math.Vector3 {
+	return c.transform.GetRotationMatrix().VecMul(Math.Vector3{Y: 1})
 }

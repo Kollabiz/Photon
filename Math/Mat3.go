@@ -75,17 +75,7 @@ func Mat3ZRotation(a float64) Mat3 {
 }
 
 func Mat3Euler(rX, rY, rZ float64) Mat3 {
-	cp := math.Cos(rX)
-	sp := math.Sin(rX)
-	cr := math.Cos(rY)
-	sr := math.Sin(rY)
-	cy := math.Cos(rZ)
-	sy := math.Sin(rZ)
-	mat := Mat3{Matrix: [9]float64{
-		cr*cy - sr*sp*sy, -cr*sy - sr*sp*cy, -sr * cp,
-		cp * sy, cp * cy, -sp,
-		sr*cy + cr*sp*sy, -sr*sy + cr*sp*cy, cr * cp,
-	}}
+	mat := Mat3ZRotation(rZ).MatMul(Mat3YRotation(rY).MatMul(Mat3XRotation(rX)))
 	return mat
 }
 

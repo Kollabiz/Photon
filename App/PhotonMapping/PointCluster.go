@@ -2,9 +2,10 @@ package PhotonMapping
 
 import (
 	"Photon/Math"
-	"Photon/Math/BoundingVolumes"
 	"Photon/Structs"
+	"Photon/Utils"
 	"math"
+	"strconv"
 )
 
 // First pass point cluster
@@ -20,25 +21,27 @@ import (
 // Cover multiple nodes at a time
 
 type CameraPoint struct {
-	Position  Math.Vector3
-	NextPoint *CameraPoint
-	I         Math.Vector3
-	R         Math.Vector3
-	Mat       *Structs.Material
-	N         Math.Vector3
+	Position           Math.Vector3
+	NextPoint          *CameraPoint
+	I                  Math.Vector3
+	R                  Math.Vector3
+	Triangle           *Structs.Triangle
+	Bary               Math.Vector2
+	Color              Math.Vector3
+	AccumulatedPhotons int
 }
 
 type KDTreeSpace struct {
-	Points    []CameraPoint
+	Points    []*CameraPoint
 	SplitAxis uint8
-	Domain    BoundingVolumes.AABoundingBox
+	Domain    Structs.AABoundingBox
 	Subspace1 *KDTreeSpace
 	Subspace2 *KDTreeSpace
 }
 
-func getPointCloudBoundaries(cloud []CameraPoint) BoundingVolumes.AABoundingBox {
+func getPointCloudBoundaries(cloud []*CameraPoint) Structs.AABoundingBox {
 	// Infinitely small bounding box (in fact, it has negative size)
-	box := BoundingVolumes.AABoundingBox{
+	box := Structs.AABoundingBox{
 		Point1: Math.InfiniteVector3(),
 		Point2: Math.NegativeInfiniteVector3(),
 	}
@@ -94,8 +97,20 @@ func planeSet(idx uint8, vec Math.Vector3, val float64) Math.Vector3 {
 	panic("Invalid split plane index in KD-tree")
 }
 
-func ConstructKDTree(pointCloud []CameraPoint, maxPointsPerDomain int) *KDTreeSpace {
+func splitAABB(splitPlane uint8, splitThreshold float64, aabb Structs.AABoundingBox) (Structs.AABoundingBox, Structs.AABoundingBox) {
+	return Structs.AABoundingBox{
+			Point1: aabb.Point1,
+			Point2: planeSet(splitPlane, aabb.Point2, splitThreshold),
+		}, Structs.AABoundingBox{
+			Point1: planeSet(splitPlane, aabb.Point1, splitThreshold),
+			Point2: aabb.Point2,
+		}
+}
+
+func ConstructKDTree(pointCloud []*CameraPoint, maxPointsPerDomain int) *KDTreeSpace {
+	Utils.Log("Creating K-D tree for the point cloud")
 	bounds := getPointCloudBoundaries(pointCloud)
+	Utils.LogSuccess("Cloud bounds found. diagonal size: " + strconv.FormatFloat(bounds.Point2.Sub(bounds.Point1).Len(), 'f', 3, 64))
 	root := &KDTreeSpace{
 		Points:    pointCloud,
 		SplitAxis: 0,
@@ -103,92 +118,68 @@ func ConstructKDTree(pointCloud []CameraPoint, maxPointsPerDomain int) *KDTreeSp
 		Subspace1: nil,
 		Subspace2: nil,
 	}
-	nodeQueue := []KDTreeSpace{*root}
+	nodeQueue := []*KDTreeSpace{root}
+
+	Utils.Log("Creating the tree...")
 
 	for len(nodeQueue) > 0 {
 		node := nodeQueue[0]
-		// If the domain is small enough, we can already skip it
 		if len(node.Points) <= maxPointsPerDomain {
 			nodeQueue = nodeQueue[1:]
 			continue
 		}
-		// Domain min
-		dmin := plane(node.SplitAxis, node.Domain.Point1)
-		// Domain max
-		dmax := plane(node.SplitAxis, node.Domain.Point2)
-
-		// Split threshold. Everything less is on one side of the split plane, and everything that's greater is on the
-		// other
-		splitThreshold := (dmax-dmin)/4 + dmin
-
-		// Subspace containing all points whose respective coordinates are LESS than splitThreshold
-		ndLess := &KDTreeSpace{
-			SplitAxis: (node.SplitAxis + 1) % 3, // Split planes should change every iteration
-			Domain: BoundingVolumes.AABoundingBox{
-				Point1: node.Domain.Point1,                                               // The MIN point of the domain won't change for that node
-				Point2: planeSet(node.SplitAxis, node.Domain.Point2, dmax-(dmax-dmin)/2), // The MAX point is set
-				// to the middle of the cloud domain (only along the split plane's perpendicular axis)
-			},
+		splitAxis := node.SplitAxis
+		splitThreshold := plane(splitAxis, node.Domain.MiddlePoint())
+		lessAABB, moreAABB := splitAABB(splitAxis, splitThreshold, node.Domain)
+		lessNode, moreNode := &KDTreeSpace{
+			Points:    []*CameraPoint{},
+			SplitAxis: (splitAxis + 1) % 3,
+			Domain:    lessAABB,
+			Subspace1: nil,
+			Subspace2: nil,
+		}, &KDTreeSpace{
+			Points:    []*CameraPoint{},
+			SplitAxis: (splitAxis + 1) % 3,
+			Domain:    moreAABB,
+			Subspace1: nil,
+			Subspace2: nil,
 		}
-		// Subspace containing all points whose respective coordinates are GREATER than splitThreshold
-		ndGreater := &KDTreeSpace{
-			SplitAxis: (node.SplitAxis + 1) % 3, // Split planes should change every iteration
-			Domain: BoundingVolumes.AABoundingBox{
-				Point1: planeSet(node.SplitAxis, node.Domain.Point1, dmax-(dmax-dmin)/2),
-				Point2: node.Domain.Point2, // The MAX point for that domain won't change
-				// to the middle of the cloud domain (only along the split plane's perpendicular axis)
-			},
-		}
-		// Assigning points
 		for i := 0; i < len(node.Points); i++ {
-			// checking which domain the point falls into
-			if plane(node.SplitAxis, node.Points[i].Position) <= splitThreshold {
-				ndLess.Points = append(ndLess.Points, node.Points[i])
+			point := node.Points[i]
+			if plane(splitAxis, point.Position) <= splitThreshold {
+				lessNode.Points = append(lessNode.Points, point)
 			} else {
-				ndGreater.Points = append(ndGreater.Points, node.Points[i])
+				moreNode.Points = append(moreNode.Points, point)
 			}
 		}
-
-		// if a node has no points, we just skip it
-		if len(ndLess.Points) > 0 {
-			node.Subspace1 = ndLess
-		}
-		if len(ndGreater.Points) > 0 {
-			node.Subspace2 = ndGreater
-		}
+		node.Subspace1 = lessNode
+		node.Subspace2 = moreNode
 		nodeQueue = nodeQueue[1:]
-		nodeQueue = append(nodeQueue, *ndLess, *ndGreater)
+		nodeQueue = append(nodeQueue, lessNode, moreNode)
 	}
+
+	Utils.LogSuccess("Done building the K-D tree for the point cloud")
 
 	return root
 }
 
-func (tree *KDTreeSpace) LocateNeighborPoints(point Math.Vector3, pointRadius float64) []CameraPoint {
+func (tree *KDTreeSpace) LocateNeighborPoints(point Math.Vector3, phR float64) *KDTreeSpace {
 	currentNode := tree
-	for currentNode.Subspace1 != nil && currentNode.Subspace2 != nil {
-		// Domain split threshold
-		splitThreshold := (plane(currentNode.SplitAxis, currentNode.Domain.Point2)-plane(currentNode.SplitAxis, currentNode.Domain.Point1))/4 + plane(currentNode.SplitAxis, currentNode.Domain.Point1)
-		// Distance of the point to the split plane
-		d := splitThreshold - plane(currentNode.SplitAxis, point)
-		// The point overlaps both subspaces. To avoid abrupt lighting falloff at the domain edges, we should return
-		// both overlapped domains
-		if math.Abs(d) < pointRadius {
-			return currentNode.Points
+	for currentNode.Subspace1 != nil {
+		if currentNode.Subspace1 == nil {
+			return currentNode
+		}
+		splitThreshold := plane(currentNode.SplitAxis, currentNode.Domain.MiddlePoint())
+		pPos := plane(currentNode.SplitAxis, point)
+		d := splitThreshold - pPos
+		if math.Abs(d) < phR {
+			return currentNode
+		}
+		if d < 0 {
+			currentNode = currentNode.Subspace2
 		} else {
-			if d >= 0 { // The point belongs in the LESS domain
-				if currentNode.Subspace1 == nil { // There is no LESS domain, just return the entire node
-					return currentNode.Points
-				} else {
-					currentNode = currentNode.Subspace1
-				}
-			} else { // The point belongs in the GREATER domain
-				if currentNode.Subspace2 == nil { // There is no GREATER domain, just return the entire node
-					return currentNode.Points
-				} else {
-					currentNode = currentNode.Subspace2
-				}
-			}
+			currentNode = currentNode.Subspace1
 		}
 	}
-	return currentNode.Points
+	return currentNode
 }

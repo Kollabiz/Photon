@@ -38,7 +38,11 @@ func (transform *Transform) Move(offset Vector3) {
 
 func (transform *Transform) Rotate(rotation Vector3) {
 	transform.rotationEuler = transform.rotationEuler.Add(rotation)
-	transform.rotation = Mat3Euler(transform.rotationEuler.X, transform.rotationEuler.Y, transform.rotationEuler.Z)
+	transform.rotation = Mat3Euler(
+		DegToRad(transform.rotationEuler.X),
+		DegToRad(transform.rotationEuler.Y),
+		DegToRad(transform.rotationEuler.Z),
+	)
 }
 
 func (transform *Transform) Resize(scale Vector3) {

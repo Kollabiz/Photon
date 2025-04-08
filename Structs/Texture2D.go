@@ -2,6 +2,7 @@ package Structs
 
 import (
 	"Photon/Math"
+	"github.com/mdouchement/hdr"
 	"image"
 	"os"
 )
@@ -41,6 +42,31 @@ func ReadTextureRGB(img string) *TextureRGB {
 		}
 	}
 	return texture
+}
+
+func EmptyTextureRGB(width, height int) *TextureRGB {
+	tex := &TextureRGB{
+		data:   make([]Math.Vector3, width*height),
+		Width:  width,
+		Height: height,
+	}
+	return tex
+}
+
+func TextureRGBFromHDR(hdrIm hdr.Image) *TextureRGB {
+	tex := &TextureRGB{
+		Width:  hdrIm.Bounds().Max.X,
+		Height: hdrIm.Bounds().Max.Y,
+	}
+	tex.data = make([]Math.Vector3, tex.Width*tex.Height)
+
+	for y := 0; y < tex.Height; y++ {
+		for x := 0; x < tex.Width; x++ {
+			r, g, b, _ := hdrIm.HDRAt(x, y).HDRRGBA()
+			tex.data[y*tex.Height+x] = Math.Vector3{r, g, b}
+		}
+	}
+	return tex
 }
 
 func (texture *TextureRGB) At(uv Math.Vector2) Math.Vector3 {

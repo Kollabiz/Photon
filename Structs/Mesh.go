@@ -1,4 +1,4 @@
-package Mesh
+package Structs
 
 import (
 	"Photon/Math"
@@ -6,10 +6,10 @@ import (
 )
 
 type Mesh struct {
-	Transform   *Math.Transform
-	Triangles   []Triangle
-	MeshName    string
-	middle      Math.Vector3
+	Transform *Math.Transform
+	Triangles []Triangle
+	MeshName  string
+	middle    Math.Vector3
 }
 
 func (mesh *Mesh) applyTransform() {
@@ -39,10 +39,10 @@ func (mesh *Mesh) Rotate(rotation Math.Vector3) {
 
 func (mesh *Mesh) LinkedCopy() *Mesh {
 	return &Mesh{
-		Transform:   mesh.Transform,
-		Triangles:   mesh.Triangles,
-		MeshName:    Utils.IncrementName(mesh.MeshName),
-		middle:      mesh.middle,
+		Transform: mesh.Transform,
+		Triangles: mesh.Triangles,
+		MeshName:  Utils.IncrementName(mesh.MeshName),
+		middle:    mesh.middle,
 	}
 }
 
@@ -51,9 +51,9 @@ func (mesh *Mesh) Copy() *Mesh {
 	copy(mesh.Triangles, trianglesCopy)
 	var transformCopy = mesh.Transform.Copy()
 	return &Mesh{
-		Transform:   transformCopy,
-		Triangles:   trianglesCopy,
-		MeshName:    Utils.IncrementName(mesh.MeshName),
-		middle:      mesh.middle,
+		Transform: transformCopy,
+		Triangles: trianglesCopy,
+		MeshName:  Utils.IncrementName(mesh.MeshName),
+		middle:    mesh.middle,
 	}
 }

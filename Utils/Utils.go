@@ -1,6 +1,8 @@
 package Utils
 
-import "strconv"
+import (
+	"strconv"
+)
 
 func isRuneADigit(r uint8) bool {
 	// 47 - '0'
